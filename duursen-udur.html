@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="mn">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+<title>(=^･ω･^=)</title>
+
+<style>
+:root{
+  --red:#ff4757;
+  --redDark:#c0392b;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body{
+  background:#fefefe;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  min-height:100dvh;
+  padding:16px;
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,sans-serif;
+  text-align:center;
+  overflow:hidden;
+  touch-action:manipulation;
+}
+
+/* ---------- LOCK ---------- */
+#lock-screen{
+  display:flex;
+  flex-direction:column;
+  gap:14px;
+  align-items:center;
+  width:min(420px,100%);
+}
+
+#door{
+  width:clamp(180px,60vw,220px);
+  height:clamp(260px,75vw,320px);
+  background:linear-gradient(145deg,#7b4a12,#5a3208);
+  border-radius:10px;
+  position:relative;
+  transition:transform .8s ease-in-out;
+  transform-origin:left center;
+  box-shadow:inset 0 0 0 6px #3a1f05;
+}
+#door::after{
+  content:"";
+  position:absolute;
+  right:20px;
+  top:50%;
+  width:22px;height:22px;
+  background:gold;
+  border-radius:50%;
+  transform:translateY(-50%);
+}
+.open{ transform:perspective(600px) rotateY(-95deg); }
+
+#lock-input{
+  font-size:18px;
+  padding:10px 12px;
+  width:min(260px,80%);
+  border-radius:10px;
+  border:2px solid #ccc;
+  text-align:center;
+}
+
+#unlock-btn{
+  padding:12px 24px;
+  font-size:18px;
+  font-weight:700;
+  background:var(--red);
+  color:#fff;
+  border:none;
+  border-radius:30px;
+  cursor:pointer;
+}
+
+/* ---------- GAME ---------- */
+#game-screen{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:14px;
+  width:min(420px,100%);
+}
+
+#game-container{
+  position:relative;
+  width:clamp(260px,80vw,320px);
+  height:clamp(260px,80vw,320px);
+  display:flex;
+  justify-content:center;
+  align-items:center;
+}
+
+#girl-image{
+  width:clamp(130px,45vw,160px);
+  border-radius:20px;
+  transition:transform .15s ease;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+#food-image{
+  width:clamp(70px,24vw,90px);
+  position:absolute;
+  bottom:6px;
+  pointer-events:none;
+  user-select:none;
+  -webkit-user-drag:none;
+}
+
+@keyframes eat{
+  0%{ transform:translateY(0) scale(1); opacity:1; }
+  100%{ transform:translateY(-90px) scale(.2); opacity:0; }
+}
+
+button{
+  padding:14px 26px;
+  font-size:18px;
+  font-weight:800;
+  background:var(--red);
+  color:#fff;
+  border:none;
+  border-radius:40px;
+  cursor:pointer;
+  box-shadow:0 5px var(--redDark);
+  -webkit-tap-highlight-color:transparent;
+}
+
+/* ---------- EXPLOSION (on top) ---------- */
+.explosion{
+  display:none;
+  position:absolute;
+  width:clamp(170px,55vw,220px);
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:10;
+  pointer-events:none;
+}
+
+/* ---------- END SCREEN ---------- */
+#end-screen{
+  display:none;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  width:min(520px,92vw);
+}
+
+#end-photo{
+  width:min(520px,92vw);
+  max-height:70vh;
+  object-fit:cover;
+  border-radius:18px;
+  box-shadow:0 10px 30px rgba(0,0,0,.12);
+}
+
+#end-caption{
+  margin:0;
+  font-weight:800;
+  font-size:20px;
+  letter-spacing:.2px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- LOCK -->
+<div id="lock-screen">
+  <h2 style="margin:0;">Хаалгыг онгойлгоорой!</h2>
+  <div id="door"></div>
+  <p style="margin:0;color:#555;">Сэжүүр: <b>мантуутай юу гэдэг вэ? /Latin/</b></p>
+
+  <input
+    id="lock-input"
+    placeholder="Нууц үг"
+    autocomplete="off"
+    autocapitalize="none"
+    autocorrect="off"
+    spellcheck="false"
+  />
+
+  <button id="unlock-btn" onclick="unlock()">Нээх</button>
+  <p id="lock-msg" style="color:red;margin:0;"></p>
+</div>
+
+<!-- GAME -->
+<div id="game-screen">
+  <h1 id="game-hint" style="margin:0;">Энхжин өлсөж байна 😭</h1>
+
+  <div id="game-container">
+    <img id="girl-image" src="https://files.catbox.moe/j663rj.png" alt="охин">
+    <img id="food-image" src="https://files.catbox.moe/2orci3.png" alt="хоол">
+
+    <!-- explosions (shown briefly, then hidden) -->
+    <img class="explosion" id="exp1" src="https://media.tenor.com/7DLHbno1htsAAAAC/susron.gif" alt="boom1">
+    <img class="explosion" id="exp2" src="https://media.tenor.com/URShj_JWaS8AAAAM/explos%C3%A3o-meme.gif" alt="boom2">
+  </div>
+
+  <button id="feed-btn" onclick="feed()">ХООЛ ӨГ 🍗</button>
+</div>
+
+<!-- END SCREEN -->
+<div id="end-screen">
+  <img
+    id="end-photo"
+    src="https://instagram.fuln6-3.fna.fbcdn.net/v/t51.82787-15/528009548_18475112980079507_3445626968312352606_n.jpg?stp=dst-jpg_e35_tt6&_nc_cat=109&ig_cache_key=MzY5MDQzODExNTAzNTE0NjU2NQ%3D%3D.3-ccb7-5&ccb=7-5&_nc_sid=58cdad&efg=eyJ2ZW5jb2RlX3RhZyI6InhwaWRzLjEyMDB4MTIwMC5zZHIuQzMifQ%3D%3D&_nc_ohc=M0QQPC5qhxcQ7kNvwEcFiWV&_nc_oc=AdlYhCbp8IOJxntbCtNAjXSq0ae19_jyx1s5oaG7MRMO6tj2Dd50LPOOu5uSLAbNZbt9lO4LQHCDOzSAhVmJWhZN&_nc_ad=z-m&_nc_cid=0&_nc_zt=23&_nc_ht=instagram.fuln6-3.fna&_nc_gid=8vLmeoONp8adDYMwa1woyQ&oh=00_AftShElXVMqFiw6hAbtbj3tDdfHeFL8Nj508YG8d_ZVetA&oe=698945C7"
+    alt="end photo"
+  >
+</div>
+
+<!-- AUDIO -->
+<audio id="eatSound" preload="auto" playsinline
+  src="https://cdn.pixabay.com/download/audio/2022/03/15/audio_4d32c5a0c4.mp3?filename=game-eat-133405.mp3"></audio>
+<audio id="boomSound" preload="auto" playsinline
+  src="https://cdn.pixabay.com/download/audio/2022/03/10/audio_5d5e0d9f6c.mp3?filename=explosion-6084.mp3"></audio>
+
+<script>
+let bites = 0;
+const MAX = 5;
+
+const door = document.getElementById("door");
+const lockInput = document.getElementById("lock-input");
+const lockMsg = document.getElementById("lock-msg");
+const lockScreen = document.getElementById("lock-screen");
+const gameScreen = document.getElementById("game-screen");
+const endScreen = document.getElementById("end-screen");
+
+const girl = document.getElementById("girl-image");
+const food = document.getElementById("food-image");
+const hint = document.getElementById("game-hint");
+const feedBtn = document.getElementById("feed-btn");
+
+const exp1 = document.getElementById("exp1");
+const exp2 = document.getElementById("exp2");
+
+const eatSound = document.getElementById("eatSound");
+const boomSound = document.getElementById("boomSound");
+
+lockInput.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") unlock();
+});
+
+function safePlay(a){
+  try{
+    a.currentTime = 0;
+    const p = a.play();
+    if (p && typeof p.catch === "function") p.catch(() => {});
+  } catch (_) {}
+}
+
+function unlock(){
+  if (lockInput.value.trim().toLowerCase() === "lapsha"){
+    door.classList.add("open");
+    lockMsg.textContent = "";
+    setTimeout(() => {
+      lockScreen.style.display = "none";
+      gameScreen.style.display = "flex";
+    }, 850);
+  } else {
+    lockMsg.textContent = "Нууц үг буруу 😈";
+  }
+}
+
+function feed(){
+  if (bites >= MAX) return;
+
+  bites++;
+
+  food.style.animation = "none";
+  void food.offsetWidth;
+  food.style.animation = "eat .4s ease forwards";
+
+  safePlay(eatSound);
+  girl.style.transform = `scale(${1 + bites * 0.22})`;
+
+  if (bites < MAX){
+    hint.textContent = "амт гэж янзын байна шүү.😋😋";
+  } else {
+    hint.textContent = "yo za gedes duurcle";
+    feedBtn.disabled = true;
+    feedBtn.style.opacity = "0.7";
+    feedBtn.style.cursor = "not-allowed";
+    setTimeout(explodeOnceThenEnd, 600);
+  }
+}
+
+function explodeOnceThenEnd(){
+  // show gifs briefly (acts like "one time")
+  exp1.style.display = "block";
+  exp2.style.display = "block";
+  safePlay(boomSound);
+
+  // after short time, hide explosion and go to end screen
+  setTimeout(() => {
+    exp1.style.display = "none";
+    exp2.style.display = "none";
+    gameScreen.style.display = "none";
+    endScreen.style.display = "flex";
+  }, 1400); // adjust if you want longer/shorter
+}
+</script>
+
+</body>
+</html>
+
